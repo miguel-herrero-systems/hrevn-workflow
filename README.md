@@ -65,6 +65,74 @@ Do not use this if you need:
 - no API required for core functionality
 - optional remote certification via the HREVN API
 
+## For AI agents and autonomous workflows
+
+`hrevn-workflow` is useful for local AI agents, coding agents and multi-step LLM pipelines that need more than logs.
+
+If your agent reads files, calls tools, generates reports or executes a sequence of actions, this SDK provides a lightweight local black box:
+
+- checkpoint each step
+- resume from the last valid state
+- avoid rerunning completed steps
+- hash inputs and outputs with SHA-256
+- detect changed or tampered artifacts
+- export a machine-readable `workflow_manifest.json`
+- attempt HREVN certification as part of manifest export when runtime credentials are configured
+
+Logs tell you what happened.  
+Checkpoints let you resume.  
+A verifiable manifest helps prove what was produced.
+
+### Agent-friendly execution pattern
+
+```python
+from hrevn_workflow import Workflow
+
+wf = Workflow(workflow_id="agent_task_001", storage_path="./.hrevn")
+
+with wf.step("01_analyze_input", inputs=["source.txt"]) as step:
+    if step.should_run():
+        # Placeholder for your own agent or tool call.
+        result = run_agent_analysis("source.txt")
+
+        # Placeholder for your own file-writing code.
+        write_json("result.json", result)
+
+        # hrevn-workflow records metadata and hashes for the output file.
+        step.complete(outputs=["result.json"], model_used="gpt-4.1")
+
+wf.export_manifest("workflow_manifest.json")
+```
+
+The SDK does not need to own your files.
+Your agent keeps control of its artifacts; `hrevn-workflow` records their hashes, state and integrity metadata.
+
+### Example manifest shape
+
+```json
+{
+  "schema_version": "HREVN_WORKFLOW_MANIFEST_v0.1",
+  "workflow_id": "agent_task_001",
+  "status": "completed",
+  "last_valid_step": "01_analyze_input",
+  "checkpoint_chain": [
+    {
+      "step_id": "01_analyze_input",
+      "status": "completed",
+      "checkpoint_hash": "sha256...",
+      "previous_checkpoint_hash": null
+    }
+  ],
+  "certifiable_deliverables": [
+    {
+      "path": "result.json",
+      "sha256": "sha256...",
+      "role": "workflow_output"
+    }
+  ]
+}
+```
+
 In the first minute, the important part is this:
 
 - MIT-licensed local SDK
