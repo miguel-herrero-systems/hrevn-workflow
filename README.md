@@ -5,6 +5,66 @@ Optionally generate a verifiable execution record.
 
 Most AI workflows fail in the worst possible moment. When that happens, developers often have to rerun everything from scratch. `hrevn-workflow` solves this by adding lightweight checkpoints to your workflow, so you can resume from the last valid step instead of starting over.
 
+## What this repository does
+
+`hrevn-workflow` is a local-first Python SDK for checkpointing AI workflows.
+
+It allows you to:
+
+- track each step of a workflow
+- resume execution from the last valid step
+- avoid rerunning expensive LLM calls
+- detect when outputs have changed or been modified
+- export a workflow manifest
+- optionally generate a HREVN Verified Record to certify the execution
+
+### Typical use case
+
+You have a multi-step AI workflow:
+
+1. load data
+2. process input
+3. call an LLM
+4. generate outputs
+5. build a final report
+
+If the workflow fails at step 4, this SDK lets you resume from that point instead of restarting from step 1.
+
+## When to use this
+
+Use this SDK if you:
+
+- build AI pipelines or LLM workflows
+- run multi-step scripts that may fail
+- want to avoid recomputing previous steps
+- need reproducibility or traceability of outputs
+- want to prepare verifiable execution records
+
+Do not use this if you need:
+
+- a hosted workflow engine
+- a dashboard
+- enterprise observability
+
+## Input and output
+
+### Input
+
+- Python scripts
+- local files used by each workflow step
+
+### Output
+
+- local checkpoint metadata in `.hrevn/`
+- `workflow_manifest.json`
+- optional HREVN Verified Record when configured
+
+### Execution model
+
+- local-first
+- no API required for core functionality
+- optional remote certification via the HREVN API
+
 In the first minute, the important part is this:
 
 - MIT-licensed local SDK
@@ -30,10 +90,37 @@ HREVN Verified Record certification is currently included for early SDK users du
 
 This SDK solves workflow continuity. HREVN adds verifiable records when needed.
 
+## Keywords
+
+- AI workflow
+- LLM pipeline
+- checkpoint
+- resume execution
+- workflow state
+- AI debugging
+- LLM cost optimization
+- pipeline recovery
+- workflow manifest
+- verifiable execution
+- audit trail
+
 ## Learn more
 
 - Workflow continuity: [https://hrevn.com/en/workflow-continuity/](https://hrevn.com/en/workflow-continuity/)
 - Verifiable AI records: [https://hrevn.com/en/verifiable-ai-records/](https://hrevn.com/en/verifiable-ai-records/)
+
+## HREVN integration
+
+This SDK works fully locally.
+
+When HREVN runtime credentials are configured, it can:
+
+- generate a HREVN Verified Record
+- certify workflow outputs
+- provide a portable proof of what was generated and when
+
+Learn more:
+- [https://hrevn.com/en/verifiable-ai-records/](https://hrevn.com/en/verifiable-ai-records/)
 
 ## What it is
 
