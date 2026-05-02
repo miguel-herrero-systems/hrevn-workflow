@@ -7,12 +7,15 @@ Most AI workflows fail in the worst possible moment. When that happens, develope
 
 In the first minute, the important part is this:
 
+- MIT-licensed local SDK
 - local-first
 - no API key required
 - no file upload required
 - no dashboard
 - detects changed or tampered outputs
 - adds HREVN certification when configured
+
+The local SDK is free to use. HREVN Verified Record certification is currently included for early adopters when runtime credentials are configured.
 
 Unlike observability tools, this SDK is:
 
@@ -22,6 +25,10 @@ Unlike observability tools, this SDK is:
 - focused on resumability, not dashboards
 
 And when needed, it can generate a HREVN Verified Record to certify the execution.
+
+HREVN Verified Record certification is currently included for early SDK users during the initial adoption phase. This avoids friction early while keeping the local SDK and the managed certification layer clearly separated.
+
+This SDK solves workflow continuity. HREVN adds verifiable records when needed.
 
 ## Learn more
 
@@ -41,6 +48,8 @@ It helps you:
 - export a `workflow_manifest.json`;
 - detect when outputs have changed after issuance;
 - issue a HREVN Verified Record when runtime credentials are configured.
+
+The SDK is free to use locally. HREVN certification is available during the initial adoption phase to help developers generate verifiable workflow records without adding a separate pricing or provisioning step up front.
 
 ## Why this matters
 
@@ -71,6 +80,7 @@ pip install -e .
 python examples/basic_ai_pipeline.py
 hrevn-workflow --storage-path examples/.hrevn status
 hrevn-workflow --storage-path examples/.hrevn history
+hrevn-workflow --storage-path examples/.hrevn telemetry-summary
 hrevn-workflow --storage-path examples/.hrevn list-deliverables --manifest-path examples/workflow_manifest.json
 hrevn-workflow --storage-path examples/.hrevn doctor --manifest-path examples/workflow_manifest.json
 hrevn-workflow --storage-path examples/.hrevn manifest --path examples/workflow_manifest.json
@@ -84,6 +94,7 @@ What you should see:
 - first run: steps execute;
 - `status`: shows the last valid step and checkpoint hashes;
 - `history`: shows the checkpoint chain in compact form;
+- `telemetry-summary`: shows the local installation id, local event counts and certification state counts;
 - `list-deliverables`: shows which files are currently certifiable;
 - `doctor`: tells you quickly whether the workflow state is healthy;
 - `manifest`: exports a workflow manifest;
@@ -200,7 +211,20 @@ When integrated certification runs, the SDK also stores:
 .hrevn/
   certification/
     status.json
+  telemetry/
+    installation.json
+    events.jsonl
 ```
+
+Telemetry is intentionally minimal:
+
+- the SDK keeps a stable local `installation_id`
+- local workflow events are appended to `.hrevn/telemetry/events.jsonl`
+- when HREVN certification is configured, that same installation identity is included in the certification request
+
+There is no separate SaaS telemetry backend in this release. The main usage signal is still the certification path that already talks to HREVN when enabled.
+
+Telemetry is local-only. No telemetry events are sent to HREVN unless you explicitly run certification, in which case the installation ID is included in the certification request.
 
 ## How resume works
 
@@ -235,6 +259,16 @@ If credentials are configured but the remote certification call fails, the SDK r
 - `status = failed`
 
 without invalidating the local workflow, the exported manifest, or the local integrity state.
+
+The SDK also writes local telemetry events for:
+
+- workflow initialization
+- manifest export
+- doctor runs
+- certification state updates
+- resets
+
+These local events are meant for support, debugging and lightweight usage observation without changing the local-first nature of the SDK.
 
 ## Integrated certification
 
@@ -329,6 +363,13 @@ The repository is expected to stay local-first and lightweight:
 - no dashboard or remote storage;
 - generated example outputs and `.hrevn/` state stay out of version control.
 
+## License
+
+`hrevn-workflow` is released under the MIT License.
+
+The local SDK is open source.
+HREVN managed certification, runtime credentials, and backend services remain separate and may be subject to different terms.
+
 ## What it does not do
 
 This MVP does **not**:
@@ -353,6 +394,7 @@ In the current state of this repository:
 - local integration logic is implemented
 - remote certification is attempted automatically on manifest export
 - live end-to-end certification has been validated against the real HREVN runtime
+- minimal local telemetry is written under `.hrevn/telemetry/`
 
 ## Validation
 

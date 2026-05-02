@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import mimetypes
 import shutil
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -44,11 +45,14 @@ class Workflow:
         self.workflow_id = workflow_id
         self.project = project
         self.storage = WorkflowStorage(storage_path)
-        self._state = self.storage.load_state() or self._new_state(run_id=run_id)
+        existing_state = self.storage.load_state()
+        self._state = existing_state or self._new_state(run_id=run_id)
         if run_id and self._state["run_id"] != run_id:
             self._state["run_id"] = run_id
         self.run_id = self._state["run_id"]
         self._save_state()
+        if existing_state is None:
+            self._track_event("workflow_initialized", storage_path=str(self.storage.root))
 
     def _new_state(self, run_id: str | None = None) -> dict[str, Any]:
         return {
@@ -63,6 +67,19 @@ class Workflow:
     def _save_state(self) -> None:
         self._state["updated_at"] = utc_now()
         self.storage.save_state(self._state)
+
+    def _track_event(self, event_type: str, **fields: Any) -> None:
+        payload = {
+            "schema_version": "HREVN_WORKFLOW_TELEMETRY_v0.1",
+            "event_type": event_type,
+            "recorded_at": utc_now(),
+            "installation_id": self.storage.load_or_create_installation_id(),
+            "workflow_id": self.workflow_id,
+            "run_id": self.run_id,
+            "project": self.project,
+        }
+        payload.update({key: value for key, value in fields.items() if value is not None})
+        self.storage.append_telemetry_event(payload)
 
     def _step_order(self) -> list[dict[str, Any]]:
         return list(self._state.get("steps", []))
@@ -196,6 +213,14 @@ class Workflow:
 
         target_path = Path(path) if path else self.storage.manifests_dir / "workflow_manifest.json"
         self.storage.save_json(target_path, manifest)
+        self._track_event(
+            "workflow_manifest_exported",
+            manifest_path=str(target_path),
+            workflow_status=manifest["status"],
+            completed_steps=manifest["completed_steps"],
+            failed_steps=manifest["failed_steps"],
+            deliverables_count=len(manifest["certifiable_deliverables"]),
+        )
         self._integrated_certify(target_path)
         return manifest
 
@@ -234,7 +259,7 @@ class Workflow:
             "certification_ok": certification.get("ok") if certification else None,
         }
 
-        return {
+        result = {
             "ok": verify_result["ok"],
             "workflow_id": self.workflow_id,
             "run_id": self.run_id,
@@ -243,6 +268,15 @@ class Workflow:
             "checks": verify_result["checks"],
             "issues": verify_result["issues"],
         }
+        self._track_event(
+            "workflow_doctor_run",
+            manifest_path=str(manifest_file),
+            verify_ok=verify_result["ok"],
+            issues_count=len(verify_result["issues"]),
+            certification_status=summary["certification_status"],
+            certification_ok=summary["certification_ok"],
+        )
+        return result
 
     def list_deliverables(self, manifest_path: str | None = None) -> dict[str, Any]:
         target_manifest_path = Path(manifest_path) if manifest_path else self.storage.manifests_dir / "workflow_manifest.json"
@@ -278,6 +312,51 @@ class Workflow:
             "manifest_path": str(target_manifest_path),
             "deliverables_count": len(items),
             "deliverables": items,
+        }
+
+    def telemetry_summary(self) -> dict[str, Any]:
+        events = self.storage.load_telemetry_events()
+        certification_counts = {
+            "generated": 0,
+            "failed": 0,
+            "not_configured": 0,
+            "blocked_by_local_integrity": 0,
+            "other": 0,
+        }
+        workflows_initialized = 0
+        manifests_exported = 0
+        doctor_runs = 0
+        resets = 0
+
+        for event in events:
+            event_type = event.get("event_type")
+            if event_type == "workflow_initialized":
+                workflows_initialized += 1
+            elif event_type == "workflow_manifest_exported":
+                manifests_exported += 1
+            elif event_type == "workflow_doctor_run":
+                doctor_runs += 1
+            elif event_type == "workflow_reset":
+                resets += 1
+            elif event_type == "workflow_certification_recorded":
+                status = event.get("certification_status")
+                if status in certification_counts:
+                    certification_counts[status] += 1
+                else:
+                    certification_counts["other"] += 1
+
+        return {
+            "installation_id": self.storage.load_or_create_installation_id(),
+            "workflow_id": self.workflow_id,
+            "run_id": self.run_id,
+            "project": self.project,
+            "total_events": len(events),
+            "workflows_initialized": workflows_initialized,
+            "manifests_exported": manifests_exported,
+            "doctor_runs": doctor_runs,
+            "resets": resets,
+            "certifications": certification_counts,
+            "last_event": events[-1] if events else None,
         }
 
     def to_verified_record_payload(
@@ -410,21 +489,30 @@ class Workflow:
     def _integrated_certify(self, manifest_path: Path) -> None:
         verify_result = self.verify(manifest_path=str(manifest_path))
         if not verify_result["ok"]:
-            self.storage.save_certification_status(
-                {
-                    "ok": False,
-                    "status": "blocked_by_local_integrity",
-                    "error": "Local integrity verification failed before remote certification.",
-                    "manifest_path": str(manifest_path),
-                    "workflow_id": self.workflow_id,
-                    "run_id": self.run_id,
-                    "issues": verify_result["issues"],
-                }
+            blocked_payload = {
+                "ok": False,
+                "status": "blocked_by_local_integrity",
+                "error": "Local integrity verification failed before remote certification.",
+                "manifest_path": str(manifest_path),
+                "workflow_id": self.workflow_id,
+                "run_id": self.run_id,
+                "issues": verify_result["issues"],
+            }
+            self.storage.save_certification_status(blocked_payload)
+            self._track_event(
+                "workflow_certification_recorded",
+                manifest_path=str(manifest_path),
+                certification_status=blocked_payload["status"],
+                certification_ok=blocked_payload["ok"],
+                issues_count=len(verify_result["issues"]),
+                error=blocked_payload["error"],
             )
             return
 
         verified_record_payload = self.to_verified_record_payload(manifest_path=str(manifest_path))
         settings = load_certification_settings()
+        if not settings.installation_id:
+            settings = replace(settings, installation_id=self.storage.load_or_create_installation_id())
         result = certify_manifest(
             workflow_id=self.workflow_id,
             run_id=self.run_id,
@@ -438,6 +526,15 @@ class Workflow:
         payload["workflow_id"] = self.workflow_id
         payload["run_id"] = self.run_id
         self.storage.save_certification_status(payload)
+        self._track_event(
+            "workflow_certification_recorded",
+            manifest_path=str(manifest_path),
+            certification_status=payload["status"],
+            certification_ok=payload["ok"],
+            bundle_id=payload.get("bundle_id"),
+            record_id=payload.get("record_id"),
+            error=payload.get("error"),
+        )
 
     def reset(self, step_id: str | None = None) -> None:
         if step_id is None:
@@ -446,6 +543,7 @@ class Workflow:
             self._state = self._new_state()
             self.run_id = self._state["run_id"]
             self._save_state()
+            self._track_event("workflow_reset", reset_mode="full")
             return
 
         steps = self._step_order()
@@ -460,3 +558,4 @@ class Workflow:
                 kept_steps.append(step)
         self._state["steps"] = kept_steps
         self._save_state()
+        self._track_event("workflow_reset", reset_mode="from_step", step_id=step_id, remaining_steps=len(kept_steps))

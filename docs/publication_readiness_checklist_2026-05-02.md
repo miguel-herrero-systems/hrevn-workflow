@@ -34,6 +34,8 @@ This is a **release-readiness checklist**, not a technical ambition list.
 - `YES` tampering detection works
 - `YES` `record-payload` refuses integrity-broken state
 - `YES` integrated certification status is persisted locally
+- `YES` stable installation identity is persisted locally
+- `YES` minimal local telemetry is persisted without introducing a new backend
 - `YES` remote certification path is implemented and test-covered
 - `YES` live remote certification against real HREVN credentials is confirmed
 
@@ -45,6 +47,7 @@ Judgement:
 
 - `YES` `status`
 - `YES` `history`
+- `YES` `telemetry-summary`
 - `YES` `inspect-step`
 - `YES` `list-deliverables`
 - `YES` `manifest`
@@ -80,6 +83,7 @@ Judgement:
 - `YES` README documents the CLI
 - `YES` README explains `.hrevn/`
 - `YES` README explains `Verified Record` connection
+- `YES` README explains the telemetry boundary and remote failure boundary
 - `YES` README has received a final public-facing polish pass for developer tone and brevity
 - `PENDING` decide whether the public README should lead with local-first workflow value or more prominently with integrated HREVN certification
 
@@ -97,10 +101,11 @@ Judgement:
 - `YES` tampering behavior is covered
 - `YES` CLI behavior is covered
 - `YES` doctor/verify/record-payload integrity path is covered
+- `YES` local telemetry persistence is covered
 
 Last validated suite result:
 
-- `25 passed`
+- `29 passed`
 
 Judgement:
 

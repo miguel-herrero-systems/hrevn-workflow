@@ -43,6 +43,30 @@ def test_cli_history_outputs_compact_checkpoint_chain(tmp_path: Path, capsys) ->
     assert payload["history"][0]["outputs_count"] == 1
 
 
+def test_cli_telemetry_summary_outputs_local_counts(tmp_path: Path, capsys) -> None:
+    storage_path = prepare_workflow(tmp_path)
+    manifest_path = tmp_path / "workflow_manifest.json"
+    manifest_code = main(["--storage-path", str(storage_path), "manifest", "--path", str(manifest_path)])
+    assert manifest_code == 0
+    _ = capsys.readouterr()
+
+    doctor_code = main(["--storage-path", str(storage_path), "doctor", "--manifest-path", str(manifest_path)])
+    assert doctor_code == 0
+    _ = capsys.readouterr()
+
+    code = main(["--storage-path", str(storage_path), "telemetry-summary"])
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert code == 0
+    assert payload["workflow_id"] == "wf_cli"
+    assert payload["installation_id"].startswith("inst-")
+    assert payload["workflows_initialized"] == 1
+    assert payload["manifests_exported"] == 1
+    assert payload["doctor_runs"] == 1
+    assert payload["certifications"]["not_configured"] == 1
+    assert payload["last_event"]["event_type"] == "workflow_doctor_run"
+
+
 def test_cli_doctor_outputs_health_summary(tmp_path: Path, capsys) -> None:
     storage_path = prepare_workflow(tmp_path)
     manifest_path = tmp_path / "workflow_manifest.json"

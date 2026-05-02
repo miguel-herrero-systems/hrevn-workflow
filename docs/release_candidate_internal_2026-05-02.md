@@ -20,6 +20,8 @@ It already supports:
 - local integrity verification
 - local `Verified Record` payload preparation
 - integrated remote certification attempt on manifest export
+- stable local installation identity
+- local telemetry event capture in `.hrevn/telemetry/events.jsonl`
 - CLI inspection and diagnosis
 
 This is no longer just a technical prototype. It is a usable internal product candidate.
@@ -47,6 +49,7 @@ CLI features:
 
 - `hrevn-workflow status`
 - `hrevn-workflow history`
+- `hrevn-workflow telemetry-summary`
 - `hrevn-workflow list-deliverables`
 - `hrevn-workflow inspect-step --step-id ...`
 - `hrevn-workflow manifest`
@@ -93,6 +96,8 @@ The following behaviors have been verified in tests and real command runs:
 - integrated certification records `generated` when the remote runtime is mocked successfully
 - integrated certification can record `failed` when the remote call fails after local workflow completion
 - remote certification failure does not invalidate the local workflow or its exported manifest
+- a stable local `installation_id` is persisted and reused across runs
+- manifest export, doctor runs, resets and certification state changes are recorded locally as telemetry events
 - integrated certification has been validated live against `https://api.hrevn.com`
 - a real `Verified Record` response has been persisted locally with `bundle_id`, `record_id` and `download_url`
 
@@ -108,6 +113,7 @@ This release candidate should be considered healthy only if all of the following
 - tampering after manifest export is detected
 - `record-payload` fails on tampered state
 - integrated certification writes a local certification status record
+- telemetry writes local events without requiring any extra backend
 - live certification can complete successfully when valid HREVN runtime credentials are present
 - remote certification failure is acceptable if it is recorded explicitly and the local workflow remains healthy
 
@@ -122,7 +128,7 @@ pytest -q
 
 Last validated result:
 
-- `25 passed`
+- `29 passed`
 
 ### Clean-environment publication smoke
 
@@ -191,6 +197,7 @@ Expected:
 - `verify`: `ok = true`
 - `doctor`: `ok = true`
 - certification status: `not_configured` unless runtime credentials are present
+- telemetry events: present under `.hrevn/telemetry/events.jsonl`
 - with valid runtime credentials, certification status: `generated`
 
 ### Vendor example flow

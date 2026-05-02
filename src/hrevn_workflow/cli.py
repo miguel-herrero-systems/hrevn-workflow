@@ -23,6 +23,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("status", help="Show workflow status from local state.")
     subparsers.add_parser("history", help="Show a compact history of workflow checkpoints.")
+    subparsers.add_parser("telemetry-summary", help="Show a compact summary of local telemetry events.")
     doctor_parser = subparsers.add_parser("doctor", help="Run a quick health check on local workflow state.")
     doctor_parser.add_argument(
         "--manifest-path",
@@ -100,6 +101,12 @@ def command_history(storage_path: str) -> int:
     return 0
 
 
+def command_telemetry_summary(storage_path: str) -> int:
+    workflow = load_workflow(storage_path)
+    print(json.dumps(workflow.telemetry_summary(), indent=2, ensure_ascii=False))
+    return 0
+
+
 def command_doctor(storage_path: str, manifest_path: str | None) -> int:
     workflow = load_workflow(storage_path)
     print(json.dumps(workflow.doctor(manifest_path=manifest_path), indent=2, ensure_ascii=False))
@@ -158,6 +165,8 @@ def main(argv: list[str] | None = None) -> int:
             return command_status(args.storage_path)
         if args.command == "history":
             return command_history(args.storage_path)
+        if args.command == "telemetry-summary":
+            return command_telemetry_summary(args.storage_path)
         if args.command == "doctor":
             return command_doctor(args.storage_path, args.manifest_path)
         if args.command == "manifest":
