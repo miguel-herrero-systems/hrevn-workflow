@@ -1,7 +1,7 @@
 # hrevn-workflow
 
 Checkpoint your AI workflows locally. Resume from the last valid step.
-Optionally generate a verifiable execution record.
+Integrated HREVN certification when runtime credentials are configured.
 
 Most AI workflows fail in the worst possible moment. When that happens, developers often have to rerun everything from scratch. `hrevn-workflow` solves this by adding lightweight checkpoints to your workflow, so you can resume from the last valid step instead of starting over.
 
@@ -16,7 +16,7 @@ It allows you to:
 - avoid rerunning expensive LLM calls
 - detect when outputs have changed or been modified
 - export a workflow manifest
-- optionally generate a HREVN Verified Record to certify the execution
+- attempt HREVN Verified Record certification as part of manifest export when runtime credentials are configured
 
 ### Typical use case
 
