@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hrevn-workflow"
+version = "0.1.0"
+description = "Checkpoint AI workflows locally, resume from the last valid step, detect tampering, and issue HREVN Verified Records."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "HREVN" }
+]
+license = { text = "Proprietary" }
+dependencies = []
+
+[project.scripts]
+hrevn-workflow = "hrevn_workflow.cli:main"
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0"
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

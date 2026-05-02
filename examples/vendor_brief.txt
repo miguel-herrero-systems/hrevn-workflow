@@ -1,0 +1,4 @@
+Vendor: Orbit AI Services
+Use case: External document classification API for insurance claims.
+Known controls: SOC 2 claimed, human override not yet documented, retention period unclear.
+Open questions: subprocessors, model update policy, incident escalation, EU processing footprint.

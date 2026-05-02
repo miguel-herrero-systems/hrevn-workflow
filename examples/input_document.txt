@@ -1,0 +1,4 @@
+Document title: AI customer support workflow
+Owner: Operations team
+Context: Customer-facing chatbot used on website support pages.
+Known questions: user notice, escalation to human, retained logs, provider controls.
