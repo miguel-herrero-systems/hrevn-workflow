@@ -1,7 +1,7 @@
 # hrevn-workflow
 
 Repo público:
-- https://github.com/ai-human-andalusia/hrevn-workflow
+- https://github.com/miguel-herrero-systems/hrevn-workflow
 
 ## Qué es
 
